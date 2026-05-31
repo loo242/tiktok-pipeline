@@ -13,8 +13,9 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install requests google-auth google-auth-httplib2
-      - run: python sync_assets.py
-env:
+      - name: Run sync
+        run: python sync_assets.py
+        env:
           GOOGLE_FOLDER_ID: ${{ secrets.GOOGLE_FOLDER_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
