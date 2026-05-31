@@ -25,4 +25,4 @@ def get_drive_files(token):
         'fields': 'files(id,name,mimeType)'
     }
     headers = {'Authorization': f'Bearer {token}'}
-    response = requests.get(url, params=
+    response = requests.get(url, params=params, headers=headers)
