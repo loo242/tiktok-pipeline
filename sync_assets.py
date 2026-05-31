@@ -26,3 +26,44 @@ def get_drive_files(token):
     }
     headers = {'Authorization': f'Bearer {token}'}
     response = requests.get(url, params=params, headers=headers)
+    return response.json().get('files', [])
+
+def get_airtable_records():
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Assets"
+    headers = {'Authorization': f'Bearer {AIRTABLE_TOKEN}'}
+    response = requests.get(url, headers=headers)
+    records = response.json().get('records', [])
+    return {r['fields'].get('File ID'): r['id'] for r in records if 'File ID' in r['fields']}
+
+def upsert_file(file, existing_records):
+    headers = {
+        'Authorization': f'Bearer {AIRTABLE_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    fields = {
+        'File ID': file['id'],
+        'Filename': file['name'],
+        'File type': file['mimeType']
+    }
+    if file['id'] in existing_records:
+        record_id = existing_records[file['id']]
+        url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Assets/{record_id}"
+        requests.patch(url, json={'fields': fields}, headers=headers)
+        print(f"Updated: {file['name']}")
+    else:
+        url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Assets"
+        requests.post(url, json={'records': [{'fields': fields}]}, headers=headers)
+        print(f"Created: {file['name']}")
+
+if __name__ == '__main__':
+    print("Getting Google token...")
+    token = get_google_token()
+    print("Fetching files from Google Drive...")
+    files = get_drive_files(token)
+    print(f"Found {len(files)} files")
+    print("Fetching existing Airtable records...")
+    existing = get_airtable_records()
+    print(f"Found {len(existing)} existing records")
+    for file in files:
+        upsert_file(file, existing)
+    print(f"Done — processed {len(files)} files")
