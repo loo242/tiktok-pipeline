@@ -68,6 +68,13 @@ def save_to_airtable(topics):
         'Authorization': f'Bearer {AIRTABLE_TOKEN}',
         'Content-Type': 'application/json'
     }
+
+    existing = requests.get(url, headers=headers).json()
+    for record in existing.get('records', []):
+        rid = record['id']
+        requests.delete(f"{url}/{rid}", headers=headers)
+    print(f"Cleared {len(existing.get('records', []))} old records")
+
     now = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
     records = []
     for t in topics:
