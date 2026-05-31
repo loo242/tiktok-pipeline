@@ -1,29 +1,31 @@
 import os
-import json
 import requests
 import feedparser
 from datetime import datetime
-from pytrends.request import TrendReq
 
 AIRTABLE_TOKEN = os.environ['AIRTABLE_TOKEN']
 AIRTABLE_BASE_ID = os.environ['AIRTABLE_BASE_ID']
-APIFY_TOKEN = os.environ['APIFY_TOKEN']
 
-def get_google_trends():
+def get_google_trends_rss():
     try:
-        pytrends = TrendReq(hl='en-US', tz=360)
-        trending = pytrends.trending_searches(pn='united_states')
-        topics = trending[0].tolist()[:10]
-        print(f"Google Trends: {len(topics)} topics")
-        return [{'topic': t, 'source': 'google_trends', 'hashtags': ''} for t in topics]
+        url = 'https://trends.google.com/trends/trendingsearches/daily/rss?geo=US'
+        feed = feedparser.parse(url)
+        topics = []
+        for entry in feed.entries[:10]:
+            topics.append({
+                'topic': entry.title,
+                'source': 'google_trends',
+                'hashtags': ''
+            })
+        print(f"Google Trends RSS: {len(topics)} topics")
+        return topics
     except Exception as e:
-        print(f"Google Trends error: {e}")
+        print(f"Google Trends RSS error: {e}")
         return []
 
 def get_rss_trends():
     feeds = [
         'https://feeds.bbci.co.uk/news/rss.xml',
-        'https://feeds.reuters.com/reuters/topNews',
         'https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en'
     ]
     topics = []
@@ -40,49 +42,6 @@ def get_rss_trends():
             print(f"RSS error for {feed_url}: {e}")
     print(f"RSS feeds: {len(topics)} topics")
     return topics
-
-def get_apify_trends():
-    try:
-        run_url = "https://api.apify.com/v2/acts/clockworks~tiktok-scraper/runs"
-        headers = {'Authorization': f'Bearer {APIFY_TOKEN}'}
-        payload = {
-            'searchQueries': ['trending'],
-            'resultsType': 'hashtag',
-            'maxResultsPerQuery': 10
-        }
-        response = requests.post(run_url, json=payload, headers=headers)
-        run = response.json()
-        run_id = run.get('data', {}).get('id')
-        if not run_id:
-            print("Apify: could not start run")
-            return []
-
-        import time
-        for _ in range(12):
-            time.sleep(10)
-            status_url = f"https://api.apify.com/v2/actor-runs/{run_id}"
-            status = requests.get(status_url, headers=headers).json()
-            if status.get('data', {}).get('status') == 'SUCCEEDED':
-                break
-
-        dataset_id = status.get('data', {}).get('defaultDatasetId')
-        items_url = f"https://api.apify.com/v2/datasets/{dataset_id}/items"
-        items = requests.get(items_url, headers=headers).json()
-
-        topics = []
-        for item in items[:10]:
-            tag = item.get('name', '')
-            if tag:
-                topics.append({
-                    'topic': tag,
-                    'source': 'apify_tiktok',
-                    'hashtags': f'#{tag}'
-                })
-        print(f"Apify: {len(topics)} topics")
-        return topics
-    except Exception as e:
-        print(f"Apify error: {e}")
-        return []
 
 def score_topics(all_topics):
     scores = {}
@@ -129,9 +88,8 @@ def save_to_airtable(topics):
 if __name__ == '__main__':
     print("Starting trend watcher...")
     all_topics = []
-    all_topics += get_google_trends()
+    all_topics += get_google_trends_rss()
     all_topics += get_rss_trends()
-    all_topics += get_apify_trends()
     print(f"Total raw topics: {len(all_topics)}")
     top5 = score_topics(all_topics)
     print(f"Top 5 trends: {[t['topic'] for t in top5]}")
