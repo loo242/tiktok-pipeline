@@ -16,11 +16,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests pytrends feedparser
+        run: pip install requests feedparser
 
       - name: Run trend watcher
         run: python trend_watcher.py
         env:
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
           AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
