@@ -48,12 +48,12 @@ def upsert_file(file, existing_records):
     if file['id'] in existing_records:
         record_id = existing_records[file['id']]
         url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Assets/{record_id}"
-        requests.patch(url, json={'fields': fields}, headers=headers)
-        print(f"Updated: {file['name']}")
+        response = requests.patch(url, json={'fields': fields}, headers=headers)
+        print(f"Updated: {file['name']} — status {response.status_code} — {response.text}")
     else:
         url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/Assets"
-        requests.post(url, json={'records': [{'fields': fields}]}, headers=headers)
-        print(f"Created: {file['name']}")
+        response = requests.post(url, json={'records': [{'fields': fields}]}, headers=headers)
+        print(f"Created: {file['name']} — status {response.status_code} — {response.text}")
 
 if __name__ == '__main__':
     print("Getting Google token...")
